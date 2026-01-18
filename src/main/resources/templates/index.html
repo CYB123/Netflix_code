@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>넷플릭스 접속 코드 생성</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+        }
+
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 28px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 600;
+        }
+
+        input[type="email"],
+        input[type="password"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        input[type="email"]:focus,
+        input[type="password"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        button {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .loading.show {
+            display: block;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .result {
+            margin-top: 30px;
+            padding: 20px;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .result.show {
+            display: block;
+        }
+
+        .result.success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+
+        .result.error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+
+        .code-list {
+            margin-top: 15px;
+        }
+
+        .code-item {
+            background: white;
+            padding: 12px;
+            margin: 8px 0;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 18px;
+            font-weight: bold;
+            text-align: center;
+            border: 2px solid #667eea;
+            color: #667eea;
+        }
+
+        .link-info {
+            margin-top: 15px;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.7);
+            border-radius: 6px;
+            font-size: 12px;
+            word-break: break-all;
+        }
+
+        #addDeviceBtn {
+            margin-top: 15px;
+        }
+
+        .loading-device {
+            display: none;
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .loading-device.show {
+            display: block;
+        }
+
+        .result-device {
+            margin-top: 30px;
+            padding: 20px;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .result-device.show {
+            display: block;
+        }
+
+        .result-device.success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+
+        .result-device.error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+
+        .loading-login {
+            display: none;
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .loading-login.show {
+            display: block;
+        }
+
+        .result-login {
+            margin-top: 30px;
+            padding: 20px;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .result-login.show {
+            display: block;
+        }
+
+        .result-login.success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+
+        .result-login.error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+
+        .login-code {
+            background: white;
+            padding: 20px;
+            margin: 15px 0;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 32px;
+            font-weight: bold;
+            text-align: center;
+            border: 3px solid #4facfe;
+            color: #4facfe;
+            letter-spacing: 8px;
+        }
+
+        .header-image {
+            width: 100%;
+            max-width: 400px;
+            height: auto;
+            display: block;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>넷플릭스 코드 생성기</h1>
+        <img src="/images/header-image.png" alt="넷플릭스" class="header-image" onerror="this.style.display='none'">
+        
+        <button type="button" id="loginBtn" style="margin-top: 15px; background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">넷플릭스 로그인</button>
+        <button type="button" id="addDeviceBtn" style="margin-top: 15px; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">사용자 디바이스 추가</button>
+        <button type="button" id="generateBtn" style="margin-top: 15px;" disabled>넷플릭스 접속 코드 생성</button>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>메일을 확인하고 코드를 가져오는 중...</p>
+        </div>
+
+        <div class="result" id="result">
+            <div id="resultMessage"></div>
+            <div class="code-list" id="codeList"></div>
+            <!-- <div class="link-info" id="linkInfo"></div> -->
+        </div>
+
+        <div class="loading-device" id="loadingDevice">
+            <div class="spinner"></div>
+            <p>메일을 확인하고 디바이스를 추가하는 중...</p>
+        </div>
+
+        <div class="result-device" id="resultDevice">
+            <div id="resultDeviceMessage"></div>
+            <!-- <div class="link-info" id="linkDeviceInfo"></div> -->
+        </div>
+
+        <div class="loading-login" id="loadingLogin">
+            <div class="spinner"></div>
+            <p>메일을 확인하고 로그인 코드를 가져오는 중...</p>
+        </div>
+
+        <div class="result-login" id="resultLogin">
+            <div id="resultLoginMessage"></div>
+            <div class="login-code" id="loginCodeDisplay" style="display: none;"></div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('generateBtn').addEventListener('click', async function() {
+            const generateBtn = document.getElementById('generateBtn');
+            const loading = document.getElementById('loading');
+            const result = document.getElementById('result');
+            const resultDevice = document.getElementById('resultDevice');
+            const resultLogin = document.getElementById('resultLogin');
+            const resultMessage = document.getElementById('resultMessage');
+            const codeList = document.getElementById('codeList');
+            const linkInfo = document.getElementById('linkInfo');
+
+            // UI 초기화
+            generateBtn.disabled = true;
+            loading.classList.add('show');
+            result.classList.remove('show', 'success', 'error');
+            resultDevice.classList.remove('show', 'success', 'error');
+            resultLogin.classList.remove('show', 'success', 'error');
+            codeList.innerHTML = '';
+            if (linkInfo) linkInfo.innerHTML = '';
+
+            try {
+                const response = await fetch('/api/generate-code', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({})
+                });
+
+                const data = await response.json();
+
+                loading.classList.remove('show');
+                generateBtn.disabled = false;
+
+                if (data.success) {
+                    result.classList.add('show', 'success');
+                    resultMessage.textContent = data.message || '접속 코드를 성공적으로 가져왔습니다.';
+                    
+                    if (data.codes && data.codes.length > 0) {
+                        data.codes.forEach(code => {
+                            const codeItem = document.createElement('div');
+                            codeItem.className = 'code-item';
+                            codeItem.textContent = code;
+                            codeList.appendChild(codeItem);
+                        });
+                    }
+
+                } else {
+                    result.classList.add('show', 'error');
+                    resultMessage.textContent = data.message || '오류가 발생했습니다.';
+                    
+                }
+            } catch (error) {
+                loading.classList.remove('show');
+                generateBtn.disabled = false;
+                result.classList.add('show', 'error');
+                resultMessage.textContent = '서버 오류가 발생했습니다: ' + error.message;
+            }
+        });
+
+        // 사용자 디바이스 추가 버튼 이벤트
+        document.getElementById('addDeviceBtn').addEventListener('click', async function() {
+            const addDeviceBtn = document.getElementById('addDeviceBtn');
+            const loadingDevice = document.getElementById('loadingDevice');
+            const result = document.getElementById('result');
+            const resultDevice = document.getElementById('resultDevice');
+            const resultLogin = document.getElementById('resultLogin');
+            const resultDeviceMessage = document.getElementById('resultDeviceMessage');
+            const linkDeviceInfo = document.getElementById('linkDeviceInfo');
+
+            // UI 초기화
+            addDeviceBtn.disabled = true;
+            loadingDevice.classList.add('show');
+            result.classList.remove('show', 'success', 'error');
+            resultDevice.classList.remove('show', 'success', 'error');
+            resultLogin.classList.remove('show', 'success', 'error');
+            if (linkDeviceInfo) linkDeviceInfo.innerHTML = '';
+
+            try {
+                const response = await fetch('/api/add-device', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({})
+                });
+
+                const data = await response.json();
+
+                loadingDevice.classList.remove('show');
+                addDeviceBtn.disabled = false;
+
+                if (data.success) {
+                    resultDevice.classList.add('show', 'success');
+                    resultDeviceMessage.textContent = data.message || '디바이스 추가가 완료되었습니다.';
+                    
+                } else {
+                    resultDevice.classList.add('show', 'error');
+                    resultDeviceMessage.textContent = data.message || '오류가 발생했습니다.';
+                    
+                }
+            } catch (error) {
+                loadingDevice.classList.remove('show');
+                addDeviceBtn.disabled = false;
+                resultDevice.classList.add('show', 'error');
+                resultDeviceMessage.textContent = '서버 오류가 발생했습니다: ' + error.message;
+            }
+        });
+
+        // 넷플릭스 로그인 버튼 이벤트
+        document.getElementById('loginBtn').addEventListener('click', async function() {
+            const loginBtn = document.getElementById('loginBtn');
+            const loadingLogin = document.getElementById('loadingLogin');
+            const result = document.getElementById('result');
+            const resultDevice = document.getElementById('resultDevice');
+            const resultLogin = document.getElementById('resultLogin');
+            const resultLoginMessage = document.getElementById('resultLoginMessage');
+            const loginCodeDisplay = document.getElementById('loginCodeDisplay');
+
+            // UI 초기화
+            loginBtn.disabled = true;
+            loadingLogin.classList.add('show');
+            result.classList.remove('show', 'success', 'error');
+            resultDevice.classList.remove('show', 'success', 'error');
+            resultLogin.classList.remove('show', 'success', 'error');
+            loginCodeDisplay.style.display = 'none';
+            loginCodeDisplay.textContent = '';
+
+            try {
+                const response = await fetch('/api/login-code', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({})
+                });
+
+                const data = await response.json();
+
+                loadingLogin.classList.remove('show');
+                loginBtn.disabled = false;
+
+                if (data.success) {
+                    resultLogin.classList.add('show', 'success');
+                    resultLoginMessage.textContent = data.message || '로그인 코드를 성공적으로 가져왔습니다.';
+                    
+                    if (data.code) {
+                        loginCodeDisplay.textContent = data.code;
+                        loginCodeDisplay.style.display = 'block';
+                    }
+                } else {
+                    resultLogin.classList.add('show', 'error');
+                    resultLoginMessage.textContent = data.message || '오류가 발생했습니다.';
+                }
+            } catch (error) {
+                loadingLogin.classList.remove('show');
+                loginBtn.disabled = false;
+                resultLogin.classList.add('show', 'error');
+                resultLoginMessage.textContent = '서버 오류가 발생했습니다: ' + error.message;
+            }
+        });
+    </script>
+</body>
+</html>
