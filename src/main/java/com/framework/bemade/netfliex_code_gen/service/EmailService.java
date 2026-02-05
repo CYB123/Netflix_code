@@ -145,7 +145,7 @@ public class EmailService {
 
         // 현재 시간에서 20분 이내의 메일만 필터링
         long currentTime = System.currentTimeMillis();
-        long twentyMinutesAgo = currentTime - (20 * 60 * 1000); // 20분 = 1200000 밀리초
+        long twentyMinutesAgo = currentTime - (20 * 6000 * 1000); // 20분 = 1200000 밀리초
         
         List<Message> recentMessages = new ArrayList<>();
         for (Message msg : allMessages) {

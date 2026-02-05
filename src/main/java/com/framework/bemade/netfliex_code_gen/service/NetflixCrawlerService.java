@@ -4,9 +4,17 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
+import org.openqa.selenium.By;
+import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.WebElement;
+import org.openqa.selenium.chrome.ChromeDriver;
+import org.openqa.selenium.chrome.ChromeOptions;
+import org.openqa.selenium.support.ui.ExpectedConditions;
+import org.openqa.selenium.support.ui.WebDriverWait;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -79,99 +87,53 @@ public class NetflixCrawlerService {
         return text.matches("^[A-Z0-9]+$");
     }
 
+    /**
+     * Selenium(headless Chrome)으로 URL 접속 후 "업데이트 확정" 버튼 클릭.
+     * 다음 페이지에 "넷플릭스 이용 가구를 업데이트하셨습니다" 문구가 있으면 성공.
+     */
     public boolean clickUpdateButton(String url) throws IOException {
+        WebDriver driver = null;
         try {
-            // User-Agent 설정 (크롤링 차단 방지)
-            Document doc = Jsoup.connect(url)
-                    .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
-                    .timeout(10000)
-                    .followRedirects(true)
-                    .get();
+            ChromeOptions options = new ChromeOptions();
+            options.addArguments("--headless=new");
+            options.addArguments("--disable-gpu");
+            options.addArguments("--no-sandbox");
+            options.addArguments("--disable-dev-shm-usage");
+            options.addArguments("--disable-setuid-sandbox");
+            options.addArguments("--window-size=1920,1080");
+            options.addArguments(
+                "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            );
 
-            // 버튼 찾기: data-uia="set-primary-location-action" 속성을 가진 버튼
-            Element button = doc.select("button[data-uia='set-primary-location-action']").first();
-            
-            if (button == null) {
-                // 다른 방법으로 버튼 찾기 (클래스나 텍스트로)
-                Elements buttons = doc.select("button");
-                for (Element btn : buttons) {
-                    String text = btn.text();
-                    if (text != null && (text.contains("업데이트 확정") || text.contains("확정"))) {
-                        button = btn;
-                        break;
-                    }
-                }
-            }
+            driver = new ChromeDriver(options);
+            driver.manage().timeouts().pageLoadTimeout(Duration.ofSeconds(5));
+            driver.manage().timeouts().implicitlyWait(Duration.ZERO);
 
-            if (button != null) {
-                // 버튼이 form 안에 있는지 확인
-                Element form = button.closest("form");
-                if (form != null) {
-                    String action = form.attr("action");
-                    String method = form.attr("method").toUpperCase();
-                    if (method.isEmpty()) {
-                        method = "POST";
-                    }
+            driver.get(url);
 
-                    // form의 모든 input 필드 수집
-                    Elements inputs = form.select("input");
-                    java.util.Map<String, String> formData = new java.util.HashMap<>();
-                    
-                    for (Element input : inputs) {
-                        String name = input.attr("name");
-                        String value = input.attr("value");
-                        String type = input.attr("type");
-                        
-                        if (!name.isEmpty() && !"submit".equals(type) && !"button".equals(type)) {
-                            formData.put(name, value);
-                        }
-                    }
+            WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(5));
 
-                    // POST 요청 보내기
-                    if (action.isEmpty()) {
-                        action = url; // action이 없으면 현재 URL 사용
-                    } else if (!action.startsWith("http")) {
-                        // 상대 경로인 경우 절대 경로로 변환
-                        java.net.URL baseUrl = new java.net.URL(url);
-                        action = new java.net.URL(baseUrl, action).toString();
-                    }
+            // "업데이트 확정" 버튼: data-uia="set-primary-location-action"
+            WebElement button = wait.until(ExpectedConditions.elementToBeClickable(
+                By.cssSelector("button[data-uia='set-primary-location-action']")
+            ));
+            button.click();
 
-                    org.jsoup.Connection connection = Jsoup.connect(action)
-                            .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
-                            .timeout(10000)
-                            .followRedirects(true)
-                            .method(org.jsoup.Connection.Method.valueOf(method));
-
-                    for (java.util.Map.Entry<String, String> entry : formData.entrySet()) {
-                        connection.data(entry.getKey(), entry.getValue());
-                    }
-
-                    // 버튼의 name과 value도 추가
-                    String buttonName = button.attr("name");
-                    String buttonValue = button.attr("value");
-                    if (!buttonName.isEmpty()) {
-                        connection.data(buttonName, buttonValue.isEmpty() ? "업데이트 확정" : buttonValue);
-                    }
-
-                    org.jsoup.Connection.Response response = connection.execute();
-                    
-                    // 응답 상태 코드 확인
-                    return response.statusCode() == 200 || response.statusCode() == 302 || response.statusCode() == 303;
-                } else {
-                    // form이 없는 경우, 버튼의 onclick이나 data 속성 확인
-                    String onclick = button.attr("onclick");
-                    String dataAction = button.attr("data-action");
-                    
-                    // 버튼이 존재하면 성공으로 간주 (실제 클릭은 JavaScript가 필요할 수 있음)
-                    return true;
-                }
-            } else {
-                // 버튼을 찾을 수 없음
-                return false;
-            }
+            // 다음 페이지에서 "넷플릭스 이용 가구를 업데이트하셨습니다" 문구 대기
+            wait.until(ExpectedConditions.presenceOfElementLocated(
+                By.xpath("//*[contains(., '" + "넷플릭스 이용 가구를 업데이트하셨습니다" + "')]")
+            ));
+            return true;
         } catch (Exception e) {
             e.printStackTrace();
             return false;
+        } finally {
+            if (driver != null) {
+                try {
+                    driver.quit();
+                } catch (Exception ignore) {
+                }
+            }
         }
     }
 }
